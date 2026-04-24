@@ -1,0 +1,6 @@
+const router = require('express').Router();
+const prisma = require('../prisma');
+router.get('/', async (req,res)=>{ try{ const users=await prisma.user.findMany({ include:{ assignments:{ include:{ task:true } } } }); res.json(users.map(u=>({ id:u.id, email:u.email, totalLoad:u.assignments.reduce((s,a)=>s+a.load,0), assignments:u.assignments }))); } catch(e){ console.error(e); res.status(500).json({error:'Ressourcen konnten nicht geladen werden'}); } });
+router.post('/', async (req,res)=>{ try{ const {email}=req.body; if(!email) return res.status(400).json({error:'E-Mail erforderlich'}); res.json(await prisma.user.create({ data:{ email, password:'demo' } })); } catch(e){ console.error(e); res.status(500).json({error:'Ressource konnte nicht erstellt werden'}); } });
+router.post('/assign', async (req,res)=>{ try{ const userId=Number(req.body.userId), taskId=Number(req.body.taskId), load=Number(req.body.load); if(!userId||!taskId||!load) return res.status(400).json({error:'User, Task und Workload erforderlich'}); res.json(await prisma.assignment.upsert({ where:{userId_taskId:{userId,taskId}}, update:{load}, create:{userId,taskId,load} })); } catch(e){ console.error(e); res.status(500).json({error:'Zuweisung fehlgeschlagen'}); } });
+module.exports = router;

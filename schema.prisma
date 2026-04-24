@@ -1,0 +1,60 @@
+datasource db { provider = "sqlite"; url = "file:./dev.db" }
+generator client { provider = "prisma-client-js" }
+
+model Project {
+  id        Int      @id @default(autoincrement())
+  name      String
+  ownerId   Int?
+  owner     User?    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+  createdAt DateTime @default(now())
+}
+
+model Task {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String   @default("")
+  duration    Int
+  start       Int?
+  end         Int?
+  status      String   @default("OPEN")
+  type        String   @default("TASK")
+  phase       String   @default("")
+  critical    Boolean  @default(false)
+  slack       Int      @default(0)
+  projectId   Int?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  dependencies TaskDependency[] @relation("TaskDependenciesFrom")
+  dependents   TaskDependency[] @relation("TaskDependenciesTo")
+  assignments  Assignment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskDependency {
+  id     Int @id @default(autoincrement())
+  fromId Int
+  toId   Int
+  from Task @relation("TaskDependenciesFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   Task @relation("TaskDependenciesTo", fields: [toId], references: [id], onDelete: Cascade)
+  @@unique([fromId, toId])
+}
+
+model User {
+  id       Int    @id @default(autoincrement())
+  email    String @unique
+  password String
+  projects Project[]
+  assignments Assignment[]
+  createdAt DateTime @default(now())
+}
+
+model Assignment {
+  id     Int @id @default(autoincrement())
+  userId Int
+  taskId Int
+  load   Int
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  @@unique([userId, taskId])
+}
